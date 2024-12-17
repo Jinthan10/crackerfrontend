@@ -2,18 +2,18 @@ import React, { useState, useEffect } from 'react';
 import '../styles/Product.css';
 function Products() {
   const [products, setProducts] = useState([]);
-
+ 
   useEffect(() => {
     // Fetch products data from your backend
-    fetch('http://myloader-54490939.us-east-1.elb.amazonaws.com/api/products')
+    fetch('http://localhost:8080/api/products')
       .then(response => response.json())
       .then(data => setProducts(data))
       .catch(error => console.error('Error fetching products data:', error));
   }, []);
-
+ 
  return (
     <div className="container-product">
-      <h2>Our Products</h2>
+      <h2>Explore Our Products</h2>
       <table>
         <thead >
           <tr>
@@ -39,5 +39,5 @@ function Products() {
     </div>
   );
 }
-
+ 
 export default Products;
