@@ -25,7 +25,7 @@ const Contactus = () => {
     e.preventDefault();
  
     try {
-      const response = await axios.post('http://localhost:8080/contactus', formData);
+      const response = await axios.post('http://192.168.68.191:8080/contactus', formData);
       console.log('Form submission response:', response.data);
  
       // Display success message and clear form
