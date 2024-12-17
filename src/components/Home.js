@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/Home.css';
 function Home() {
-
+ 
   return (
        <div className="container">
-         <h2>Welcome kaja</h2>
+         <h2>Welcome to Crackers world!</h2>
          <p>
-           Discover the world of delicious crackers??
+           Discover the world of delicious crackers. From classic favorites to
+           innovative flavors, we have something for everyone!
          </p>
-
+ 
          {/* Links to other sections */}
          <div className="dashboard-container">
            <div className="dashboard-col">
@@ -25,5 +26,5 @@ function Home() {
        </div>
      );
    }
-
+ 
 export default Home;
