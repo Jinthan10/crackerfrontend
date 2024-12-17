@@ -1,9 +1,9 @@
 // Contactus.js
-
+ 
 import React, { useState } from 'react';
 import axios from 'axios';
 import '../styles/contactus.css';
-
+ 
 const Contactus = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -11,23 +11,23 @@ const Contactus = () => {
     phone_number: '',
     message: '',
   });
-
+ 
   const [submitSuccess, setSubmitSuccess] = useState(false);
-
+ 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
   };
-
+ 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+ 
     try {
-      const response = await axios.post('http://myloader-54490939.us-east-1.elb.amazonaws.com/contactus', formData);
+      const response = await axios.post('http://localhost:8080/contactus', formData);
       console.log('Form submission response:', response.data);
-
+ 
       // Display success message and clear form
       setSubmitSuccess(true);
       setFormData({
@@ -41,10 +41,10 @@ const Contactus = () => {
       console.error('Error submitting form:', error);
     }
   };
-
+ 
   return (
     <div className="contactus-container">
-      <h2>Contact Me</h2>
+      <h2>Contact Us</h2>
       {submitSuccess && <p className="success-message">Message sent successfully!</p>}
       <form onSubmit={handleSubmit}>
         <div className="form-group">
@@ -95,7 +95,6 @@ const Contactus = () => {
     </div>
   );
 };
-
+ 
 export default Contactus;
-
-
+ 
