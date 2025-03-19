@@ -2,7 +2,7 @@
 FROM node:18 AS build
 
 # Set the working directory
-WORKDIR /app
+WORKDIR /app1
 
 # Copy the package.json and package-lock.json (or yarn.lock) first for caching dependencies
 COPY package*.json ./
