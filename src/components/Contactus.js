@@ -26,7 +26,7 @@ const Contactus = () => {
 
     try {
       #const response = await axios.post('http://myloader-54490939.us-east-1.elb.amazonaws.com/contactus', formData);
-      const response = await axios.post('https://backend-936800529124.us-central1.run.app', formData);
+      const response = await axios.post('https://backend-936800529124.us-central1.run.app/api/contactus', formData);
       console.log('Form submission response:', response.data);
 
       // Display success message and clear form
