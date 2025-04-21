@@ -14,7 +14,7 @@ function Products() {
     // Direct backend URL
     const backendUrl = 'https://backend-936800529124.us-central1.run.app';
 
-    fetch(`${backendUrl}/api/products`)
+    fetch(`${backendUrl}/products`)
       .then(response => response.json())
       .then(data => setProducts(data))
       .catch(error => console.error('Error fetching products data:', error));
