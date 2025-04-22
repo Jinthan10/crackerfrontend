@@ -3,18 +3,9 @@ import '../styles/Product.css';
 function Products() {
   const [products, setProducts] = useState([]);
 
-#  useEffect(() => {
-#    // Fetch products data from your backend
-#    fetch('http://myloader-54490939.us-east-1.elb.amazonaws.com/api/products')
-#      .then(response => response.json())
-#      .then(data => setProducts(data))
-#      .catch(error => console.error('Error fetching products data:', error));
-#  }, []);
-     useEffect(() => {
-    // Direct backend URL
-    const backendUrl = 'https://backend-936800529124.us-central1.run.app';
-
-    fetch(`${backendUrl}/products`)
+  useEffect(() => {
+    // Fetch products data from your backend
+    fetch('https://backend-936800529124.us-central1.run.app/api/products')
       .then(response => response.json())
       .then(data => setProducts(data))
       .catch(error => console.error('Error fetching products data:', error));
