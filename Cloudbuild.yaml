@@ -1,7 +1,3 @@
 steps:
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build','-t','us-central1-docker.pkg.dev/feisty-filament-454407-c6/crackerfrontend/crackerfrontend:latest','.']
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push','us-central1-docker.pkg.dev/feisty-filament-454407-c6/crackerfrontend/crackerfrontend:latest']
-images:
-  - 'us-central1-docker.pkg.dev/feisty-filament-454407-c6/crackerfrontend/crackerfrontend:latest'  
+    args: ['build','-t','crackerfrontend:latest','.']
