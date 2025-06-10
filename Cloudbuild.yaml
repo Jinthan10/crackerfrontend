@@ -1,6 +1,9 @@
 steps:
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build','-t','crackerfrontend:latest','.']
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:latest', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:latest']
 
 options:
   logging: CLOUD_LOGGING_ONLY
