@@ -31,6 +31,7 @@ steps:
       - us-central1
       - --allow-unauthenticated
       - --no-traffic
+      - --set-env-vars=PORT=80
 
   # Smoke test the new deployment (replace /health with your endpoint)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
