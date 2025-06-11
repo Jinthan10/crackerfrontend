@@ -35,7 +35,6 @@ steps:
         '--allow-unauthenticated',
         '--set-env-vars=PORT=80',
         '--no-traffic'
-        
       ]
 
   # Smoke test the new deployment
@@ -43,12 +42,11 @@ steps:
     id: Smoke-Test
     entrypoint: bash
     args:
-      [
-        '-c',
-        'NEW_URL=$(gcloud run services describe ganesh-frontend2 --region=us-central1 --format="value(status.url)") && ' +
-        'echo "Testing $NEW_URL" && ' +
-        'curl -f "$NEW_URL/health" || (echo "Smoke test failed" && exit 1)'
-      ]
+      - -c
+      - |
+        NEW_URL=$(gcloud run services describe ganesh-frontend2 --region=us-central1 --format="value(status.url)")
+        echo "Testing $NEW_URL"
+        curl -f "$NEW_URL/health" || (echo "Smoke test failed" && exit 1)
 
   # Shift all traffic to the new revision
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
