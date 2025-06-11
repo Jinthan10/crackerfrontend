@@ -5,7 +5,7 @@ steps:
       [
         'build',
         '-t',
-        'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:$SHORT_SHA',
+        'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:latest',
         '.'
       ]
 
@@ -14,7 +14,7 @@ steps:
     args:
       [
         'push',
-        'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:$SHORT_SHA'
+        'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:latest'
       ]
 
   # Deploy without traffic, configure Cloud Run to listen on port 80
@@ -27,7 +27,7 @@ steps:
         'deploy',
         'ganesh-frontend2',
         '--image',
-        'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:$SHORT_SHA',
+        'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:latest',
         '--platform',
         'managed',
         '--region',
