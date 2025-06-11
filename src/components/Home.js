@@ -5,7 +5,7 @@ function Home() {
  
   return (
        <div className="container">
-         <h2>Welcome to Crackers world! new</h2>
+         <h2>Welcome to Crackers world! new build</h2>
          <p>
            Discover the world of delicious crackers. From classic favorites to
            innovative flavors, we have something for everyone!
