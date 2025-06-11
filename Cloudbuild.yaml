@@ -1,59 +1,67 @@
 steps:
-  # Build the Docker image
+  # Build Docker image tagged with commit SHA
   - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'build',
-      '-t',
-      'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:$SHORT_SHA',
-      '.'
-    ]
+    args:
+      [
+        'build',
+        '-t',
+        'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:$SHORT_SHA',
+        '.'
+      ]
 
-  # Push the image to Artifact Registry
+  # Push image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'push',
-      'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:$SHORT_SHA'
-    ]
+    args:
+      [
+        'push',
+        'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:$SHORT_SHA'
+      ]
 
-  # Deploy the new revision without traffic
+  # Deploy without traffic, set PORT=80 env var for your app
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: Deploy-No-Traffic
     entrypoint: gcloud
     args:
-      - run
-      - deploy
-      - ganesh-frontend2
-      - --image
-      - 'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:$SHORT_SHA'
-      - --platform
-      - managed
-      - --region
-      - us-central1
-      - --allow-unauthenticated
-      - --no-traffic
-      - --set-env-vars=PORT=80
+      [
+        'run',
+        'deploy',
+        'ganesh-frontend2',
+        '--image',
+        'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:$SHORT_SHA',
+        '--platform',
+        'managed',
+        '--region',
+        'us-central1',
+        '--allow-unauthenticated',
+        '--no-traffic',
+        '--set-env-vars=PORT=80'
+      ]
 
-  # Smoke test the new deployment (replace /health with your endpoint)
+  # Smoke test the new deployment
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: Smoke-Test
     entrypoint: bash
     args:
-      - '-c'
-      - |
-        NEW_URL=$(gcloud run services describe ganesh-frontend2 --region=us-central1 --format="value(status.url)")
-        echo "Testing $NEW_URL"
-        curl -f "$NEW_URL/health" || (echo "Smoke test failed" && exit 1)
+      [
+        '-c',
+        'NEW_URL=$(gcloud run services describe ganesh-frontend2 --region=us-central1 --format="value(status.url)") && ' +
+        'echo "Testing $NEW_URL" && ' +
+        'curl -f "$NEW_URL/health" || (echo "Smoke test failed" && exit 1)'
+      ]
 
-  # Shift 100% traffic to the new revision
+  # Shift all traffic to the new revision
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: Shift-Traffic
     entrypoint: gcloud
     args:
-      - run
-      - services
-      - update-traffic
-      - ganesh-frontend2
-      - --to-latest
-      - --region=us-central1
+      [
+        'run',
+        'services',
+        'update-traffic',
+        'ganesh-frontend2',
+        '--to-latest',
+        '--region=us-central1'
+      ]
+
 options:
   logging: CLOUD_LOGGING_ONLY
