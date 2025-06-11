@@ -33,8 +33,9 @@ steps:
         '--region',
         'us-central1',
         '--allow-unauthenticated',
-        '--no-traffic',
-        '--set-env-vars=PORT=80'
+        '--set-env-vars=PORT=80',
+        '--no-traffic'
+        
       ]
 
   # Smoke test the new deployment
