@@ -17,7 +17,7 @@ steps:
         'us-central1-docker.pkg.dev/feisty-filament-454407-c6/ganesh-repository/crackerfrontend:$SHORT_SHA'
       ]
 
-  # Deploy without traffic, set PORT=80 env var for your app
+  # Deploy without traffic, configure Cloud Run to listen on port 80
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: Deploy-No-Traffic
     entrypoint: gcloud
@@ -33,7 +33,7 @@ steps:
         '--region',
         'us-central1',
         '--allow-unauthenticated',
-        '--set-env-vars=PORT=80',
+        '--port=80',
         '--no-traffic'
       ]
 
@@ -44,9 +44,9 @@ steps:
     args:
       - -c
       - |
-        NEW_URL=$(gcloud run services describe ganesh-frontend2 --region=us-central1 --format="value(status.url)")
-        echo "Testing $NEW_URL"
-        curl -f "$NEW_URL/health" || (echo "Smoke test failed" && exit 1)
+        NEW_URL=$(gcloud run services describe ganesh-frontend2 --region=us-central1 --format='value(status.url)')
+        echo "Testing $$NEW_URL"
+        curl -f "$$NEW_URL/health" || { echo "Smoke test failed"; exit 1; }
 
   # Shift all traffic to the new revision
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
