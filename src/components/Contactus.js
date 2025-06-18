@@ -25,7 +25,7 @@ const Contactus = () => {
     e.preventDefault();
  
     try {
-      const response = await axios.post('http://192.168.68.218:8080/contactus', formData);
+      const response = await axios.post('https://crackerbackend-936800529124.europe-west1.run.app/contactus', formData);
       console.log('Form submission response:', response.data);
  
       // Display success message and clear form
