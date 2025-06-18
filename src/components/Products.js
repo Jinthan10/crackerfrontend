@@ -5,7 +5,7 @@ function Products() {
  
   useEffect(() => {
     // Fetch products data from your backend
-    fetch('http://192.168.68.218:8080/api/products')
+    fetch('https://crackerbackend-936800529124.europe-west1.run.app/api/products')
       .then(response => response.json())
       .then(data => setProducts(data))
       .catch(error => console.error('Error fetching products data:', error));
