@@ -1,0 +1,78 @@
+trigger:
+- main  # change if your branch name is different (like master or dev)
+
+pool:
+  name: 'Default'
+  demands:
+  - agent.name -equals testing   # use your Windows agent named 'testing'
+
+variables:
+  azureSubscription: 'azure-connection'   # Azure DevOps service connection (connected to ACR subscription)
+  storageAccountName: 'myblobui'
+  acrName: 'backendapli'
+  buildDir: 'build'                      # React build output folder
+  artifactName: 'drop'
+
+stages:
+# ---------------------- BUILD STAGE ----------------------
+- stage: Build
+  displayName: 'Build React Frontend'
+  jobs:
+  - job: BuildReact
+    displayName: 'Install and Build React App'
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '18.x'
+      displayName: 'Install Node.js 18'
+
+    - checkout: self
+      displayName: 'Checkout Source Code from GitHub'
+
+    - script: |
+        echo "Installing npm dependencies..."
+        npm install
+        echo "Building React app..."
+        npm run build
+      displayName: 'Build React Project'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(buildDir)'
+        artifactName: '$(artifactName)'
+      displayName: 'Publish Build Artifacts'
+
+# ---------------------- DEPLOY STAGE ----------------------
+- stage: Deploy
+  displayName: 'Deploy React App to Azure Storage'
+  dependsOn: Build
+  jobs:
+  - deployment: DeployToStorage
+    displayName: 'Upload React Build to Storage Account'
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: $(artifactName)
+            displayName: 'Download Build Artifact'
+
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Logging into Azure Container Registry..."
+                az acr login --name $(acrName)
+                
+                echo "Uploading React build files to Azure Storage..."
+                az storage blob upload-batch `
+                  --account-name $(storageAccountName) `
+                  -s "$(Pipeline.Workspace)/$(artifactName)" `
+                  -d '$web' `
+                  --overwrite
+
+                echo "Deployment completed successfully!"
+            displayName: 'Upload Build to $web container'
