@@ -1,20 +1,47 @@
-trigger:
-- main  # change this if your GitHub branch is 'master' or another name
+# -------------------------------------------------------------
+# Azure DevOps Pipeline for React Frontend Deployment
+# Source: GitHub (Jinthan10/crackerfrontend)
+# Target: Azure Storage Account (myblobui)
+# Agent: Windows (testing)
+# Service connection: mypip
+# ACR: backendapli
+# -------------------------------------------------------------
 
+trigger:
+- main   # change if your default GitHub branch is 'master' or something else
+
+# ----------------------------------------
+# Connect GitHub repo properly
+# ----------------------------------------
+resources:
+  repositories:
+  - repository: self
+    type: github
+    name: Jinthan10/crackerfrontend   # 👈 your GitHub repo name
+    endpoint: github-connection        # 👈 your GitHub service connection (create it once)
+
+# ----------------------------------------
+# Use your self-hosted Windows agent
+# ----------------------------------------
 pool:
   name: 'Default'
   demands:
-  - agent.name -equals testing   # use your Windows agent named 'testing'
+  - agent.name -equals testing
 
+# ----------------------------------------
+# Variables
+# ----------------------------------------
 variables:
-  azureSubscription: 'mypip'         # ✅ Updated service connection name
-  storageAccountName: 'myblobui'     # your frontend storage account
-  acrName: 'backendapli'             # your ACR name
-  buildDir: 'build'                  # React build output folder
-  artifactName: 'drop'
+  azureSubscription: 'mypip'          # ✅ your Azure service connection
+  storageAccountName: 'myblobui'      # ✅ your Storage Account name
+  acrName: 'backendapli'              # ✅ your ACR name
+  buildDir: 'build'                   # React build output folder
+  artifactName: 'drop'                # temporary artifact name
 
+# ==============================================================
+# Stage 1: BUILD FRONTEND
+# ==============================================================
 stages:
-# ---------------------- BUILD STAGE ----------------------
 - stage: Build
   displayName: 'Build React Frontend'
   jobs:
@@ -30,9 +57,9 @@ stages:
       displayName: 'Checkout Source Code from GitHub'
 
     - script: |
-        echo "Installing npm dependencies..."
+        echo "📦 Installing npm dependencies..."
         npm install
-        echo "Building React app..."
+        echo "🏗️ Building React app..."
         npm run build
       displayName: 'Build React Project'
 
@@ -42,13 +69,15 @@ stages:
         artifactName: '$(artifactName)'
       displayName: 'Publish Build Artifacts'
 
-# ---------------------- DEPLOY STAGE ----------------------
+# ==============================================================
+# Stage 2: DEPLOY TO AZURE STORAGE
+# ==============================================================
 - stage: Deploy
   displayName: 'Deploy React App to Azure Storage'
   dependsOn: Build
   jobs:
   - deployment: DeployToStorage
-    displayName: 'Upload React Build to Azure Storage Account'
+    displayName: 'Upload React Build to Storage Account'
     environment: 'production'
     strategy:
       runOnce:
@@ -64,10 +93,10 @@ stages:
               scriptType: 'ps'
               scriptLocation: 'inlineScript'
               inlineScript: |
-                echo "Logging into Azure Container Registry..."
+                echo "🔐 Logging into Azure Container Registry..."
                 az acr login --name $(acrName)
 
-                echo "Uploading React build files to Azure Storage..."
+                echo "🚀 Uploading React build files to Azure Storage..."
                 az storage blob upload-batch `
                   --account-name $(storageAccountName) `
                   -s "$(Pipeline.Workspace)/$(artifactName)" `
