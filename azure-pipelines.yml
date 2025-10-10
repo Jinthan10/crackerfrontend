@@ -1,20 +1,19 @@
 trigger:
-- main    # or master
+- main    # or master if that’s your branch name
 
 pool:
-  name: 'Default'   # Your agent pool name
+  name: 'Default'
 
 variables:
-  reactAppDir: '$(System.DefaultWorkingDirectory)'
-  buildDir: '$(System.DefaultWorkingDirectory)/crackerfrontend/build'
-  storageAccount: 'myblobui'   # Your Azure Storage Account name
+  storageAccount: 'myblobui'
+  serviceConnection: 'mypip'
 
 stages:
 - stage: Build
   displayName: 'Build React App'
   jobs:
   - job: Build
-    displayName: 'Build React Frontend'
+    displayName: 'React Build'
     steps:
     - checkout: self
       clean: true
@@ -25,39 +24,40 @@ stages:
       displayName: 'Use Node.js 18'
 
     - script: |
-        cd $(reactAppDir)/crackerfrontend
+        echo "Changing directory to crackerfrontend..."
+        cd crackerfrontend
         echo "Installing dependencies..."
         npm install
-        echo "Building React app..."
+        echo "Running build..."
         npm run build
-        echo "Build completed!"
+        echo "Checking build output..."
         dir build
       displayName: 'Install and Build React App'
 
     - task: PublishBuildArtifacts@1
       inputs:
-        PathtoPublish: '$(reactAppDir)/crackerfrontend/build'
+        PathtoPublish: 'crackerfrontend/build'
         ArtifactName: 'drop'
         publishLocation: 'Container'
       displayName: 'Publish Build Artifacts'
 
 - stage: Deploy
-  displayName: 'Deploy to Azure Storage Account'
+  displayName: 'Deploy React to Azure Storage'
   dependsOn: Build
   jobs:
-  - job: DeployToStorage
-    displayName: 'Upload to Azure Blob (Static Website)'
+  - job: Deploy
+    displayName: 'Upload to Azure Static Website'
     steps:
     - download: current
       artifact: drop
 
     - task: AzureCLI@2
       inputs:
-        azureSubscription: 'mypip'   # your service connection name
+        azureSubscription: '$(serviceConnection)'
         scriptType: 'ps'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          echo "Uploading files to Azure Storage Account $(storageAccount)"
+          echo "Deploying to Azure Storage Account $(storageAccount)..."
           az storage blob upload-batch `
             --account-name $(storageAccount) `
             -s "$(Pipeline.Workspace)/drop" `
