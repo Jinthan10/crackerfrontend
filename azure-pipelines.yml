@@ -1,107 +1,68 @@
-# -------------------------------------------------------------
-# Azure DevOps Pipeline for React Frontend Deployment
-# Source: GitHub (Jinthan10/crackerfrontend)
-# Target: Azure Storage Account (myblobui)
-# Agent: Windows (testing)
-# Service connection: mypip
-# ACR: backendapli
-# -------------------------------------------------------------
-
 trigger:
-- main   # change if your default GitHub branch is 'master' or something else
+- main    # or master if your branch is master
 
-# ----------------------------------------
-# Connect GitHub repo properly
-# ----------------------------------------
-resources:
-  repositories:
-  - repository: self
-    type: github
-    name: Jinthan10/crackerfrontend   # 👈 your GitHub repo name
-    endpoint: github-connection        # 👈 your GitHub service connection (create it once)
-
-# ----------------------------------------
-# Use your self-hosted Windows agent
-# ----------------------------------------
 pool:
-  name: 'Default'
-  demands:
-  - agent.name -equals testing
+  name: 'Default'   # or your correct pool name
 
-# ----------------------------------------
-# Variables
-# ----------------------------------------
 variables:
-  azureSubscription: 'mypip'          # ✅ your Azure service connection
-  storageAccountName: 'myblobui'      # ✅ your Storage Account name
-  acrName: 'backendapli'              # ✅ your ACR name
-  buildDir: 'build'                   # React build output folder
-  artifactName: 'drop'                # temporary artifact name
+  buildDir: '$(System.DefaultWorkingDirectory)/build'
+  reactAppDir: '$(System.DefaultWorkingDirectory)'
+  storageAccount: 'myblobui'
 
-# ==============================================================
-# Stage 1: BUILD FRONTEND
-# ==============================================================
 stages:
 - stage: Build
-  displayName: 'Build React Frontend'
+  displayName: 'Build React App'
   jobs:
-  - job: BuildReact
-    displayName: 'Install and Build React App'
+  - job: Build
+    displayName: 'Build React frontend'
     steps:
+    - checkout: self
+      clean: true
+
     - task: NodeTool@0
       inputs:
         versionSpec: '18.x'
-      displayName: 'Install Node.js 18'
-
-    - checkout: self
-      displayName: 'Checkout Source Code from GitHub'
+      displayName: 'Use Node.js 18'
 
     - script: |
-        echo "📦 Installing npm dependencies..."
+        cd $(reactAppDir)
+        echo "Current directory:"
+        pwd
+        echo "Installing npm packages..."
         npm install
-        echo "🏗️ Building React app..."
+        echo "Running React build..."
         npm run build
-      displayName: 'Build React Project'
+        echo "Build completed. Contents of build folder:"
+        dir build
+      displayName: 'Install and Build React App'
 
     - task: PublishBuildArtifacts@1
       inputs:
-        pathToPublish: '$(buildDir)'
-        artifactName: '$(artifactName)'
+        PathtoPublish: '$(buildDir)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
       displayName: 'Publish Build Artifacts'
 
-# ==============================================================
-# Stage 2: DEPLOY TO AZURE STORAGE
-# ==============================================================
 - stage: Deploy
-  displayName: 'Deploy React App to Azure Storage'
+  displayName: 'Deploy to Azure Storage Account'
   dependsOn: Build
   jobs:
-  - deployment: DeployToStorage
-    displayName: 'Upload React Build to Storage Account'
-    environment: 'production'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - download: current
-            artifact: $(artifactName)
-            displayName: 'Download Build Artifact'
+  - job: DeployToStorage
+    displayName: 'Upload to Azure Blob (Static Website)'
+    steps:
+    - download: current
+      artifact: drop
 
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: '$(azureSubscription)'
-              scriptType: 'ps'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                echo "🔐 Logging into Azure Container Registry..."
-                az acr login --name $(acrName)
-
-                echo "🚀 Uploading React build files to Azure Storage..."
-                az storage blob upload-batch `
-                  --account-name $(storageAccountName) `
-                  -s "$(Pipeline.Workspace)/$(artifactName)" `
-                  -d '$web' `
-                  --overwrite
-
-                echo "✅ Deployment completed successfully!"
-            displayName: 'Upload Build to $web container'
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'mypip'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Uploading files to Azure Storage Account $(storageAccount)"
+          az storage blob upload-batch `
+            --account-name $(storageAccount) `
+            -s "$(Pipeline.Workspace)/drop" `
+            -d '$web' `
+            --overwrite true
+      displayName: 'Deploy to Azure Static Website'
