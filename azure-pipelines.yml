@@ -1,8 +1,8 @@
 trigger:
-- main    # or master if that’s your branch name
+- main    # or master
 
 pool:
-  name: 'Default'
+  name: 'Default'    # or your self-hosted agent pool (e.g. testing)
 
 variables:
   storageAccount: 'myblobui'
@@ -24,29 +24,27 @@ stages:
       displayName: 'Use Node.js 18'
 
     - script: |
-        echo "Changing directory to crackerfrontend..."
-        cd crackerfrontend
-        echo "Installing dependencies..."
+        echo "=== Installing dependencies ==="
         npm install
-        echo "Running build..."
-        npm run build
-        echo "Checking build output..."
+        echo "=== Running React build ==="
+        npm run build || exit 1
+        echo "=== Listing files in build folder ==="
         dir build
       displayName: 'Install and Build React App'
 
     - task: PublishBuildArtifacts@1
       inputs:
-        PathtoPublish: 'crackerfrontend/build'
+        PathtoPublish: 'build'
         ArtifactName: 'drop'
         publishLocation: 'Container'
       displayName: 'Publish Build Artifacts'
 
 - stage: Deploy
-  displayName: 'Deploy React to Azure Storage'
+  displayName: 'Deploy to Azure Storage'
   dependsOn: Build
   jobs:
   - job: Deploy
-    displayName: 'Upload to Azure Static Website'
+    displayName: 'Deploy React App to Azure Blob'
     steps:
     - download: current
       artifact: drop
@@ -57,7 +55,7 @@ stages:
         scriptType: 'ps'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          echo "Deploying to Azure Storage Account $(storageAccount)..."
+          echo "Uploading React app to Azure Storage Account $(storageAccount)..."
           az storage blob upload-batch `
             --account-name $(storageAccount) `
             -s "$(Pipeline.Workspace)/drop" `
