@@ -1,14 +1,17 @@
 trigger:
-- main
+- main    # or master
 
 pool:
-  name: 'Default'   # or 'testing' if that’s your custom agent pool name
+  name: 'Default'   # Your agent pool name (e.g., testing)
 
 variables:
   storageAccount: 'myblobui'
   serviceConnection: 'mypip'
 
 stages:
+# ========================
+# Stage 1: Build React App
+# ========================
 - stage: Build
   displayName: 'Build React App'
   jobs:
@@ -24,17 +27,22 @@ stages:
       displayName: 'Use Node.js 18'
 
     - script: |
-        echo "=== Current working directory ==="
-        pwd
-        echo "=== Listing files before install ==="
+        echo "=== Node and NPM Versions ==="
+        node -v
+        npm -v
+
+        echo "=== Listing files before npm install ==="
         dir
+
         echo "=== Installing dependencies ==="
         npm install
+
         echo "=== Running React build ==="
-        npm run build || exit 1
-        echo "=== Listing ALL folders after build ==="
-        dir /s
-      displayName: 'Debug: Build React App and list files'
+        npm run build || (echo "❌ Build failed!" & exit 1)
+
+        echo "=== Listing build folder contents ==="
+        dir build
+      displayName: 'Install and Build React App'
 
     - task: PublishBuildArtifacts@1
       inputs:
@@ -43,12 +51,15 @@ stages:
         publishLocation: 'Container'
       displayName: 'Publish Build Artifacts'
 
+# ==============================
+# Stage 2: Deploy to Azure Blob
+# ==============================
 - stage: Deploy
-  displayName: 'Deploy to Azure Storage'
+  displayName: 'Deploy React App to Azure Storage'
   dependsOn: Build
   jobs:
   - job: Deploy
-    displayName: 'Deploy React App to Azure Blob'
+    displayName: 'Upload to Azure Static Website'
     steps:
     - download: current
       artifact: drop
