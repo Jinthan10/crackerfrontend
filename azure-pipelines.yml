@@ -1,8 +1,8 @@
 trigger:
-- main    # or master
+- main
 
 pool:
-  name: 'Default'    # or your self-hosted agent pool (e.g. testing)
+  name: 'Default'   # or 'testing' if that’s your custom agent pool name
 
 variables:
   storageAccount: 'myblobui'
@@ -24,13 +24,17 @@ stages:
       displayName: 'Use Node.js 18'
 
     - script: |
+        echo "=== Current working directory ==="
+        pwd
+        echo "=== Listing files before install ==="
+        dir
         echo "=== Installing dependencies ==="
         npm install
         echo "=== Running React build ==="
         npm run build || exit 1
-        echo "=== Listing files in build folder ==="
-        dir build
-      displayName: 'Install and Build React App'
+        echo "=== Listing ALL folders after build ==="
+        dir /s
+      displayName: 'Debug: Build React App and list files'
 
     - task: PublishBuildArtifacts@1
       inputs:
