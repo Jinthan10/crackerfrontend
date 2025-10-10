@@ -1,20 +1,20 @@
 trigger:
-- main    # or master if your branch is master
+- main    # or master
 
 pool:
-  name: 'Default'   # or your correct pool name
+  name: 'Default'   # Your agent pool name
 
 variables:
-  buildDir: '$(System.DefaultWorkingDirectory)/build'
   reactAppDir: '$(System.DefaultWorkingDirectory)'
-  storageAccount: 'myblobui'
+  buildDir: '$(System.DefaultWorkingDirectory)/crackerfrontend/build'
+  storageAccount: 'myblobui'   # Your Azure Storage Account name
 
 stages:
 - stage: Build
   displayName: 'Build React App'
   jobs:
   - job: Build
-    displayName: 'Build React frontend'
+    displayName: 'Build React Frontend'
     steps:
     - checkout: self
       clean: true
@@ -25,20 +25,18 @@ stages:
       displayName: 'Use Node.js 18'
 
     - script: |
-        cd $(reactAppDir)
-        echo "Current directory:"
-        pwd
-        echo "Installing npm packages..."
+        cd $(reactAppDir)/crackerfrontend
+        echo "Installing dependencies..."
         npm install
-        echo "Running React build..."
+        echo "Building React app..."
         npm run build
-        echo "Build completed. Contents of build folder:"
+        echo "Build completed!"
         dir build
       displayName: 'Install and Build React App'
 
     - task: PublishBuildArtifacts@1
       inputs:
-        PathtoPublish: '$(buildDir)'
+        PathtoPublish: '$(reactAppDir)/crackerfrontend/build'
         ArtifactName: 'drop'
         publishLocation: 'Container'
       displayName: 'Publish Build Artifacts'
@@ -55,7 +53,7 @@ stages:
 
     - task: AzureCLI@2
       inputs:
-        azureSubscription: 'mypip'
+        azureSubscription: 'mypip'   # your service connection name
         scriptType: 'ps'
         scriptLocation: 'inlineScript'
         inlineScript: |
