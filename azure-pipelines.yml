@@ -1,81 +1,104 @@
 trigger:
-- main
-
-pool:
-  name: 'Default'
+  - main   # change if your branch is different
 
 variables:
-  storageAccount: 'myblobui'
-  serviceConnection: 'mypip'
+  # ---- Sonar ----
+  SONARQUBE_IMAGE: 'sonarqube:lts'
+  SONAR_SCANNER_IMAGE: 'sonarsource/sonar-scanner-cli:latest'
+  SONAR_PROJECT_KEY: 'backendapli'
+  SONAR_PROJECT_NAME: 'Backend Application'
+  SONAR_PROJECT_VERSION: '1.0'
 
-stages:
-- stage: Build
-  displayName: 'Build React App'
-  jobs:
-  - job: Build
-    displayName: 'React Build'
-    steps:
-    - checkout: self
-      clean: true
+  # ---- Azure ----
+  azureSubscription: 'Azure-Connection'
+  azureResourceGroup: 'my-rg'
+  acrName: 'backendapli'
+  acrServer: 'backendapli.azurecr.io'
+  containerGroup: 'backendapli'
+  imageName: 'backendapli'
 
-    - task: NodeTool@0
-      inputs:
-        versionSpec: '18.x'
-      displayName: 'Use Node.js 18'
+pool:
+  vmImage: 'ubuntu-latest'
 
-    - script: |
-        echo "=== Current Working Directory ==="
-        pwd
+steps:
+# -----------------------------
+# STEP 1: Checkout code
+# -----------------------------
+- checkout: self
 
-        echo "=== List files before npm install ==="
-        dir
+# -----------------------------
+# STEP 2: Run SonarQube (Docker)
+# -----------------------------
+- script: |
+    echo "Pull and run SonarQube container..."
+    docker run -d --name sonarqube -p 9000:9000 $(SONARQUBE_IMAGE)
+    echo "Waiting for SonarQube to be ready..."
+    sudo apt-get update -y && sudo apt-get install -y jq curl
+    for i in {1..60}; do
+      status=$(curl -s http://localhost:9000/api/system/status | jq -r .status 2>/dev/null)
+      if [ "$status" = "UP" ]; then
+        echo "SonarQube is UP!"
+        break
+      fi
+      echo "Still starting... ($i/60)"
+      sleep 5
+    done
+  displayName: 'Run local SonarQube container'
 
-        echo "=== Node and NPM Versions ==="
-        node -v
-        npm -v
+# -----------------------------
+# STEP 3: Run Sonar Scanner (Docker)
+# -----------------------------
+- script: |
+    echo "Running Sonar Scanner..."
+    docker run --rm \
+      --add-host=host.docker.internal:host-gateway \
+      -e SONAR_HOST_URL="http://host.docker.internal:9000" \
+      -e SONAR_TOKEN="admin" \
+      -v "$(System.DefaultWorkingDirectory):/usr/src" \
+      $(SONAR_SCANNER_IMAGE) \
+      -Dsonar.projectKey="$(SONAR_PROJECT_KEY)" \
+      -Dsonar.projectName="$(SONAR_PROJECT_NAME)" \
+      -Dsonar.projectVersion="$(SONAR_PROJECT_VERSION)" \
+      -Dsonar.sources=/usr/src
+  displayName: 'Run SonarQube Scanner'
 
-        echo "=== Installing Dependencies ==="
-        npm install || (echo "❌ npm install failed!" & exit 1)
+# -----------------------------
+# STEP 4: Stop SonarQube container
+# -----------------------------
+- script: |
+    echo "Cleaning up SonarQube container..."
+    docker stop sonarqube || true
+    docker rm sonarqube || true
+  displayName: 'Stop SonarQube container'
 
-        echo "=== Running React Build ==="
-        npm run build || (echo "❌ npm run build failed!" & exit 1)
+# -----------------------------
+# STEP 5: Build + Push Docker image to ACR
+# -----------------------------
+- task: Docker@2
+  displayName: 'Build and push Docker image to ACR'
+  inputs:
+    containerRegistry: '$(azureSubscription)'
+    repository: '$(imageName)'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: |
+      $(Build.BuildId)
 
-        echo "=== Listing all folders after build ==="
-        dir /s
-
-        if (!(Test-Path build)) {
-            echo "❌ Build folder does not exist!"
-            exit 1
-        }
-      displayName: 'Install & Build React App with Debug'
-
-    - task: PublishBuildArtifacts@1
-      inputs:
-        PathtoPublish: 'build'
-        ArtifactName: 'drop'
-        publishLocation: 'Container'
-      displayName: 'Publish Build Artifacts'
-
-- stage: Deploy
-  displayName: 'Deploy to Azure Storage'
-  dependsOn: Build
-  jobs:
-  - job: Deploy
-    displayName: 'Upload to Azure Static Website'
-    steps:
-    - download: current
-      artifact: drop
-
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: '$(serviceConnection)'
-        scriptType: 'ps'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          echo "Uploading React app to Azure Storage Account $(storageAccount)..."
-          az storage blob upload-batch `
-            --account-name $(storageAccount) `
-            -s "$(Pipeline.Workspace)/drop" `
-            -d '$web' `
-            --overwrite true
-      displayName: 'Deploy to Azure Static Website'
+# -----------------------------
+# STEP 6: Deploy to Azure Container Instance
+# -----------------------------
+- task: AzureCLI@2
+  displayName: 'Deploy to Azure Container Instance'
+  inputs:
+    azureSubscription: '$(azureSubscription)'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      echo "Deploying new image to ACI..."
+      az container create \
+        --resource-group $(azureResourceGroup) \
+        --name $(containerGroup) \
+        --image $(acrServer)/$(imageName):$(Build.BuildId) \
+        --registry-login-server $(acrServer) \
+        --dns-name-label $(containerGroup)-$RANDOM \
+        --ports 8080
