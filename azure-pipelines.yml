@@ -1,5 +1,5 @@
 trigger:
-- main   # pipeline triggers when YAML changes in main
+- main   # pipeline triggers when YAML changes in main branch
 
 pool:
   name: Default  # your self-hosted agent pool
@@ -8,79 +8,71 @@ variables:
   ACR_NAME: 'backendapli'      # Azure Container Registry name
   IMAGE_NAME: 'backendapp'     # Docker image name
   TAG: 'latest'                # Docker image tag
-  SONAR_PROJECT_KEY: 'backendapi'
-  SONAR_TOKEN: '$(SonarToken)'
+  SONAR_PROJECT_KEY: 'backendapp'
+  SONAR_ORG: 'myorg'                 # optional if using SonarCloud
+  SONAR_HOST_URL: 'https://sonarcloud.io'  # or your SonarQube server URL
+  SONAR_TOKEN: '$(SONAR_TOKEN)'     # store token in pipeline variable
 
 stages:
-- stage: Build
-  displayName: 'Build, Scan & Push Docker Image'
+# ---------------- STAGE 1: SONAR SCAN ----------------
+- stage: SonarQubeScan
+  displayName: 'SonarQube Code Analysis'
   jobs:
-  - job: BuildJob
-    displayName: 'Build, Scan and Push Docker Image'
+  - job: SonarScanJob
+    displayName: 'Run SonarQube Analysis'
     steps:
-
-    # Step 0 — Checkout YAML branch (main)
     - checkout: self
       clean: true
       persistCredentials: true
 
-    # Step 1 — Fetch and switch to master branch
+    # Step 1 — Install Sonar Scanner (if not available)
     - script: |
-        echo "Switching to master branch..."
-        git fetch origin master
-        git checkout master
-        git reset --hard origin/master
-      displayName: 'Checkout master branch'
-
-    # Step 2 — Start SonarQube Docker container
-    - script: |
-        echo "Starting SonarQube Docker container..."
-        docker run -d --name sonar -p 9000:9000 sonarqube:lts
-        echo "Waiting for SonarQube to start (about 60 seconds)..."
-        sleep 60
-      displayName: 'Run SonarQube Docker Container'
-
-    # Step 3 — Install SonarQube Scanner CLI
-    - script: |
-        echo "Installing SonarQube scanner..."
+        echo "Installing Sonar Scanner..."
         npm install -g sonar-scanner
-      displayName: 'Install SonarQube Scanner CLI'
+      displayName: 'Install Sonar Scanner'
 
-    # Step 4 — Run SonarQube Scan
+    # Step 2 — Run SonarQube analysis on your backend code
     - script: |
-        echo "Running SonarQube code analysis..."
+        echo "Running SonarQube scan..."
         sonar-scanner \
           -Dsonar.projectKey=$(SONAR_PROJECT_KEY) \
+          -Dsonar.organization=$(SONAR_ORG) \
           -Dsonar.sources=cracker-backend \
-          -Dsonar.host.url=http://localhost:9000 \
+          -Dsonar.host.url=$(SONAR_HOST_URL) \
           -Dsonar.login=$(SONAR_TOKEN)
       displayName: 'Run SonarQube Scan'
 
-    # Step 5 — Stop SonarQube container
-    - script: |
-        echo "Stopping SonarQube container..."
-        docker stop sonar && docker rm sonar
-      displayName: 'Stop SonarQube Container'
+# ---------------- STAGE 2: BUILD & PUSH DOCKER IMAGE ----------------
+- stage: BuildAndPush
+  displayName: 'Build & Push Docker Image'
+  dependsOn: SonarQubeScan
+  jobs:
+  - job: BuildJob
+    displayName: 'Build and Push Docker Image'
+    steps:
+    - checkout: self
+      clean: true
+      persistCredentials: true
 
-    # Step 6 — Login to Azure
+    # Step 1 — Login to Azure
     - task: AzureCLI@2
       displayName: 'Login to Azure'
       inputs:
-        azureSubscription: 'mypip-fixed'  # your Azure service connection
+        azureSubscription: 'mypip-fixed'  # your Azure service connection name
         scriptType: 'ps'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          Write-Host "Checking Azure account..."
+          Write-Host "Verifying Azure login..."
           az account show
 
-    # Step 7 — Build & Push Docker Image
+    # Step 2 — Build and Push Docker image to ACR
     - task: Docker@2
-      displayName: 'Build and Push Docker Image'
+      displayName: 'Build and Push Docker Image to ACR'
       inputs:
         containerRegistry: 'mypip1'                        # Docker/ACR service connection
         repository: '$(ACR_NAME).azurecr.io/$(IMAGE_NAME)' # Full repository name
         command: buildAndPush
-        dockerfile: 'cracker-backend/Dockerfile'           # Path in master branch
-        buildContext: 'cracker-backend'                    # Context folder
+        dockerfile: 'cracker-backend/Dockerfile'           # Path to Dockerfile
+        buildContext: 'cracker-backend'                    # Folder with Dockerfile
         tags: |
           $(TAG)
