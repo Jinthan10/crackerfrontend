@@ -1,104 +1,86 @@
 trigger:
-  - main   # change if your branch is different
-
-variables:
-  # ---- Sonar ----
-  SONARQUBE_IMAGE: 'sonarqube:lts'
-  SONAR_SCANNER_IMAGE: 'sonarsource/sonar-scanner-cli:latest'
-  SONAR_PROJECT_KEY: 'backendapli'
-  SONAR_PROJECT_NAME: 'Backend Application'
-  SONAR_PROJECT_VERSION: '1.0'
-
-  # ---- Azure ----
-  azureSubscription: 'Azure-Connection'
-  azureResourceGroup: 'my-rg'
-  acrName: 'backendapli'
-  acrServer: 'backendapli.azurecr.io'
-  containerGroup: 'backendapli'
-  imageName: 'backendapli'
+- main   # pipeline triggers when YAML changes in main
 
 pool:
-  vmImage: 'ubuntu-latest'
+  name: Default  # your self-hosted agent pool
 
-steps:
-# -----------------------------
-# STEP 1: Checkout code
-# -----------------------------
-- checkout: self
+variables:
+  ACR_NAME: 'backendapli'      # Azure Container Registry name
+  IMAGE_NAME: 'backendapp'     # Docker image name
+  TAG: 'latest'                # Docker image tag
+  SONAR_PROJECT_KEY: 'backendapi'
+  SONAR_TOKEN: '$(SonarToken)'
 
-# -----------------------------
-# STEP 2: Run SonarQube (Docker)
-# -----------------------------
-- script: |
-    echo "Pull and run SonarQube container..."
-    docker run -d --name sonarqube -p 9000:9000 $(SONARQUBE_IMAGE)
-    echo "Waiting for SonarQube to be ready..."
-    sudo apt-get update -y && sudo apt-get install -y jq curl
-    for i in {1..60}; do
-      status=$(curl -s http://localhost:9000/api/system/status | jq -r .status 2>/dev/null)
-      if [ "$status" = "UP" ]; then
-        echo "SonarQube is UP!"
-        break
-      fi
-      echo "Still starting... ($i/60)"
-      sleep 5
-    done
-  displayName: 'Run local SonarQube container'
+stages:
+- stage: Build
+  displayName: 'Build, Scan & Push Docker Image'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build, Scan and Push Docker Image'
+    steps:
 
-# -----------------------------
-# STEP 3: Run Sonar Scanner (Docker)
-# -----------------------------
-- script: |
-    echo "Running Sonar Scanner..."
-    docker run --rm \
-      --add-host=host.docker.internal:host-gateway \
-      -e SONAR_HOST_URL="http://host.docker.internal:9000" \
-      -e SONAR_TOKEN="admin" \
-      -v "$(System.DefaultWorkingDirectory):/usr/src" \
-      $(SONAR_SCANNER_IMAGE) \
-      -Dsonar.projectKey="$(SONAR_PROJECT_KEY)" \
-      -Dsonar.projectName="$(SONAR_PROJECT_NAME)" \
-      -Dsonar.projectVersion="$(SONAR_PROJECT_VERSION)" \
-      -Dsonar.sources=/usr/src
-  displayName: 'Run SonarQube Scanner'
+    # Step 0 — Checkout YAML branch (main)
+    - checkout: self
+      clean: true
+      persistCredentials: true
 
-# -----------------------------
-# STEP 4: Stop SonarQube container
-# -----------------------------
-- script: |
-    echo "Cleaning up SonarQube container..."
-    docker stop sonarqube || true
-    docker rm sonarqube || true
-  displayName: 'Stop SonarQube container'
+    # Step 1 — Fetch and switch to master branch
+    - script: |
+        echo "Switching to master branch..."
+        git fetch origin master
+        git checkout master
+        git reset --hard origin/master
+      displayName: 'Checkout master branch'
 
-# -----------------------------
-# STEP 5: Build + Push Docker image to ACR
-# -----------------------------
-- task: Docker@2
-  displayName: 'Build and push Docker image to ACR'
-  inputs:
-    containerRegistry: '$(azureSubscription)'
-    repository: '$(imageName)'
-    command: 'buildAndPush'
-    Dockerfile: '**/Dockerfile'
-    tags: |
-      $(Build.BuildId)
+    # Step 2 — Start SonarQube Docker container
+    - script: |
+        echo "Starting SonarQube Docker container..."
+        docker run -d --name sonar -p 9000:9000 sonarqube:lts
+        echo "Waiting for SonarQube to start (about 60 seconds)..."
+        sleep 60
+      displayName: 'Run SonarQube Docker Container'
 
-# -----------------------------
-# STEP 6: Deploy to Azure Container Instance
-# -----------------------------
-- task: AzureCLI@2
-  displayName: 'Deploy to Azure Container Instance'
-  inputs:
-    azureSubscription: '$(azureSubscription)'
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      echo "Deploying new image to ACI..."
-      az container create \
-        --resource-group $(azureResourceGroup) \
-        --name $(containerGroup) \
-        --image $(acrServer)/$(imageName):$(Build.BuildId) \
-        --registry-login-server $(acrServer) \
-        --dns-name-label $(containerGroup)-$RANDOM \
-        --ports 8080
+    # Step 3 — Install SonarQube Scanner CLI
+    - script: |
+        echo "Installing SonarQube scanner..."
+        npm install -g sonar-scanner
+      displayName: 'Install SonarQube Scanner CLI'
+
+    # Step 4 — Run SonarQube Scan
+    - script: |
+        echo "Running SonarQube code analysis..."
+        sonar-scanner \
+          -Dsonar.projectKey=$(SONAR_PROJECT_KEY) \
+          -Dsonar.sources=cracker-backend \
+          -Dsonar.host.url=http://localhost:9000 \
+          -Dsonar.login=$(SONAR_TOKEN)
+      displayName: 'Run SonarQube Scan'
+
+    # Step 5 — Stop SonarQube container
+    - script: |
+        echo "Stopping SonarQube container..."
+        docker stop sonar && docker rm sonar
+      displayName: 'Stop SonarQube Container'
+
+    # Step 6 — Login to Azure
+    - task: AzureCLI@2
+      displayName: 'Login to Azure'
+      inputs:
+        azureSubscription: 'mypip-fixed'  # your Azure service connection
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Checking Azure account..."
+          az account show
+
+    # Step 7 — Build & Push Docker Image
+    - task: Docker@2
+      displayName: 'Build and Push Docker Image'
+      inputs:
+        containerRegistry: 'mypip1'                        # Docker/ACR service connection
+        repository: '$(ACR_NAME).azurecr.io/$(IMAGE_NAME)' # Full repository name
+        command: buildAndPush
+        dockerfile: 'cracker-backend/Dockerfile'           # Path in master branch
+        buildContext: 'cracker-backend'                    # Context folder
+        tags: |
+          $(TAG)
