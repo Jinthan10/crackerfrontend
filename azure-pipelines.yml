@@ -2,73 +2,15 @@ trigger:
 - main   # pipeline triggers when YAML changes in main branch
 
 pool:
-  name: Default  # your self-hosted or Microsoft-hosted agent pool
-
-variables:
-  ACR_NAME: 'backendapli'      # Azure Container Registry name
-  IMAGE_NAME: 'backendapp'     # Docker image name
-  TAG: 'latest'                # Docker image tag
-  SONAR_PROJECT_KEY: 'backendapp'
-  SONAR_ORG: 'myorg'                 # optional for SonarCloud
-  SONAR_HOST_URL: 'https://sonarcloud.io'  # or your SonarQube URL
-  SONAR_TOKEN: '$(SONAR_TOKEN)'     # secret in Azure DevOps Library
+  name: Default
 
 stages:
-
-# ---------------- STAGE 1: SONARQUBE SCAN ----------------
-- stage: SonarQubeScan
-  displayName: 'SonarQube Code Analysis'
+- stage: TriggerOnly
+  displayName: 'Trigger Only Pipeline'
   jobs:
-  - job: SonarScanJob
-    displayName: 'Run SonarQube Analysis'
+  - job: DummyJob
+    displayName: 'Dummy Job to trigger Logic App'
     steps:
-    - checkout: self
-      clean: true
-      persistCredentials: true
-
-    # Step 1 — Install Sonar Scanner
     - script: |
-        echo Installing Sonar Scanner...
-        npm install -g sonar-scanner
-      displayName: 'Install Sonar Scanner'
-
-    # Step 2 — Run SonarQube Scan (✅ single line, no backslashes)
-    - script: |
-        echo Running SonarQube scan...
-        sonar-scanner -Dsonar.projectKey=$(SONAR_PROJECT_KEY) -Dsonar.organization=$(SONAR_ORG) -Dsonar.sources=cracker-backend -Dsonar.host.url=$(SONAR_HOST_URL) -Dsonar.login=$(SONAR_TOKEN)
-      displayName: 'Run SonarQube Scan'
-
-# ---------------- STAGE 2: BUILD & PUSH DOCKER IMAGE ----------------
-- stage: BuildAndPush
-  displayName: 'Build & Push Docker Image'
-  dependsOn: SonarQubeScan
-  jobs:
-  - job: BuildJob
-    displayName: 'Build and Push Docker Image'
-    steps:
-    - checkout: self
-      clean: true
-      persistCredentials: true
-
-    # Step 1 — Azure Login
-    - task: AzureCLI@2
-      displayName: 'Login to Azure'
-      inputs:
-        azureSubscription: 'mypip-fixed'  # your Azure service connection
-        scriptType: 'ps'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          Write-Host "Verifying Azure login..."
-          az account show
-
-    # Step 2 — Build and Push Docker image to ACR
-    - task: Docker@2
-      displayName: 'Build and Push Docker Image to ACR'
-      inputs:
-        containerRegistry: 'mypip1'                        # Docker/ACR service connection
-        repository: '$(ACR_NAME).azurecr.io/$(IMAGE_NAME)' # Full repo name
-        command: buildAndPush
-        dockerfile: 'cracker-backend/Dockerfile'           # Path to Dockerfile
-        buildContext: 'cracker-backend'                    # Folder containing Dockerfile
-        tags: |
-          $(TAG)
+        echo "Pipeline triggered to fire Logic App. No build or push."
+      displayName: 'Dummy Step'
