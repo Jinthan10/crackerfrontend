@@ -4,36 +4,32 @@ phases:
   install:
     runtime-versions:
       nodejs: 12
-    commands:
-      # Log in to Amazon ECR
-      - echo "Logging in to Amazon ECR..."
-     
+
   pre_build:
     commands:
-      # Define AWS region, ECR repository, and Docker image tag
-      - AWS_REGION=us-east-2  # Set the AWS region
-      - REPOSITORY_URI=423623860069.dkr.ecr.us-east-2.amazonaws.com/ui
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+      - echo Logging in to Amazon ECR...
+      - AWS_REGION=us-east-2
+      - AWS_ACCOUNT_ID=423623860069
+      - IMAGE_REPO_NAME=ui
+
+      - aws ecr get-login-password --region $AWS_REGION |
+        docker login --username AWS --password-stdin \
+        $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - IMAGE_TAG=${COMMIT_HASH:=latest}
+      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME
+
   build:
     commands:
-      # Build the Docker image
-      - echo "Building the Docker image..."
-      - docker build -t $REPOSITORY_URI:latest .
-      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
 
   post_build:
     commands:
-      # Push the Docker image to ECR
-      - echo "Pushing the Docker image to Amazon ECR..."
-      - docker push $REPOSITORY_URI:latest
       - docker push $REPOSITORY_URI:$IMAGE_TAG
-      - echo Writing image definitions file...
       - printf '[{"name":"reactapp","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imageDefinitions.json
 
 artifacts:
-  files: 
-    - 'imageDefinitions.json'
-    # - 'appspec.yaml'
-    # - 'taskdef.json'
+  files:
+    - imageDefinitions.json
