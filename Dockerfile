@@ -18,7 +18,8 @@ COPY . .
 RUN npm run build
 
 # Step 2: Set up the production image (using a smaller image)
-FROM nginx:alpine
+#FROM nginx:alpine
+FROM public.ecr.aws/nginx/nginx:alpine
 
 # Copy the build folder from the build image to the Nginx HTML folder
 COPY --from=build /app/build /usr/share/nginx/html
