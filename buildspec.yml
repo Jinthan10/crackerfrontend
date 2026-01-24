@@ -3,37 +3,23 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      nodejs: 18
-    commands:
-      - echo Installing dependencies...
-      - npm install
-
-  pre_build:
+      nodejs: 12
     commands:
       - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 766099559515.dkr.ecr.us-east-1.amazonaws.com
-      - REPOSITORY_URI=766099559515.dkr.ecr.us-east-1.amazonaws.com/nginx
+      - AWS_REGION=us-east-1
+      - AWS_ACCOUNT_ID=423623860069
+      - IMAGE_REPO_NAME=crackerfrontend
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - IMAGE_TAG=${COMMIT_HASH:=latest}
+      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME
 
   build:
     commands:
-      - echo Building React app...
-      - npm run build
-      - echo Building the Docker image...
-      - docker build -t $REPOSITORY_URI:latest .
-      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
 
   post_build:
     commands:
-      - echo Pushing Docker images...
-      - docker push $REPOSITORY_URI:latest
+      - echo Pushing Docker image to ECR...
       - docker push $REPOSITORY_URI:$IMAGE_TAG
-      - echo Writing imagedefinitions.json...
-      - printf '[{"name":"myapp","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
-      - cat imagedefinitions.json
-
-artifacts:
-  files:
-    - imagedefinitions.json
-    - appspec.yaml
