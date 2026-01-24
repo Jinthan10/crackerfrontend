@@ -19,10 +19,10 @@ phases:
       - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
       - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
 
- post_build:
-  commands:
-    - echo "Repository URI: $REPOSITORY_URI"
-    - echo "Image tag: $IMAGE_TAG"
-    - docker images
-    - echo "Pushing Docker image to ECR..."
-    - docker push $REPOSITORY_URI:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo "Repository URI: $REPOSITORY_URI"
+      - echo "Image tag: $IMAGE_TAG"
+      - docker images
+      - echo "Pushing Docker image to ECR..."
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
