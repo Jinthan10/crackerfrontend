@@ -21,5 +21,8 @@ phases:
 
   post_build:
     commands:
+      - echo "Repository URI: $REPOSITORY_URI"
+      - echo "Image tag: $IMAGE_TAG"
+      - docker images
       - echo Pushing Docker image to ECR...
       - docker push $REPOSITORY_URI:$IMAGE_TAG
