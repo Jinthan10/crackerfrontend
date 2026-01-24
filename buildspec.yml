@@ -8,23 +8,31 @@ phases:
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
-      - AWS_REGION=us-east-1
-      - AWS_ACCOUNT_ID=423623860069
-      - IMAGE_REPO_NAME=ui
+      - export AWS_REGION=us-east-1
+      - export AWS_DEFAULT_REGION=us-east-1
+      - export AWS_ACCOUNT_ID=423623860069
+      - export IMAGE_REPO_NAME=ui
 
-      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+      - aws ecr get-login-password --region $AWS_REGION \
+        | docker login --username AWS --password-stdin \
+          $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
-      - IMAGE_TAG=${COMMIT_HASH:=latest}
-      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - export IMAGE_TAG=${COMMIT_HASH:-latest}
+      - export REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME
 
   build:
     commands:
+      - echo Build started on `date`
       - docker build -t $REPOSITORY_URI:$IMAGE_TAG .
-    #  - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
 
   post_build:
     commands:
+      - echo Listing Docker images before push:
+      - docker images
+      - echo Pushing Docker image to ECR...
       - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo Writing image definitions file...
       - printf '[{"name":"crackerfrontend","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imageDefinitions.json
 
 artifacts:
