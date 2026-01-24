@@ -1,6 +1,6 @@
 # Step 1: Use a Node.js image to build the app
 #FROM node:18 AS build
-FROM public.ecr.aws/docker/library/node:12 AS build
+FROM public.ecr.aws/docker/library/node:20 AS build
 
 # Set the working directory
 WORKDIR /app
