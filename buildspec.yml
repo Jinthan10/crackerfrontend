@@ -25,7 +25,7 @@ phases:
   post_build:
     commands:
       - docker push $REPOSITORY_URI:$IMAGE_TAG
-      - printf '[{"name":"reactapp","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imageDefinitions.json
+      - printf '[{"name":"crackerfrontend","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imageDefinitions.json
 
 artifacts:
   files:
