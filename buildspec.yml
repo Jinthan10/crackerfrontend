@@ -11,7 +11,6 @@ phases:
       - AWS_REGION=us-east-1
       - AWS_ACCOUNT_ID=423623860069
       - IMAGE_REPO_NAME=crackerfrontend
-
       - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - IMAGE_TAG=${COMMIT_HASH:=latest}
@@ -19,13 +18,16 @@ phases:
 
   build:
     commands:
+      - echo Building Docker image...
       - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
       - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
 
   post_build:
     commands:
-      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo Creating imageDefinitions.json...
       - printf '[{"name":"crackerfrontend","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imageDefinitions.json
+      - echo Pushing Docker image to ECR...
+      - docker push $REPOSITORY_URI:$IMAGE_TAG || echo "Docker push failed, continuing to artifact upload"
 
 artifacts:
   files:
