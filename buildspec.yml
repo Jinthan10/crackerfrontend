@@ -8,7 +8,7 @@ phases:
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
-      - AWS_REGION=us-east-2
+      - AWS_REGION=us-east-1
       - AWS_ACCOUNT_ID=423623860069
       - IMAGE_REPO_NAME=ui
 
