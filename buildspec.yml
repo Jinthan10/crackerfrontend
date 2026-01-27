@@ -3,7 +3,7 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      nodejs: 12
+      nodejs: 18
     commands:
       - echo Logging in to Amazon ECR...
       - "AWS_REGION=us-east-1"
