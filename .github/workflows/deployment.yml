@@ -3,7 +3,7 @@ name: Deploy React Frontend to Azure Storage
 on:
   push:
     branches:
-      - main   # Change if your default branch is different
+      - main   # Change this if your default branch is different
 
 jobs:
   deploy:
@@ -24,7 +24,7 @@ jobs:
     - name: Install Dependencies
       run: npm install
 
-    # 4️⃣ Update Browserslist database
+    # 4️⃣ Update Browserslist database to avoid warnings
     - name: Update Browserslist DB
       run: npx update-browserslist-db@latest
 
@@ -38,7 +38,11 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    # 7️⃣ Deploy build folder to Azure Storage $web container
+    # 7️⃣ Set the subscription explicitly
+    - name: Set Azure Subscription
+      run: az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    # 8️⃣ Deploy build folder to Azure Storage $web container
     - name: Deploy to Azure Storage
       uses: azure/cli@v1
       with:
