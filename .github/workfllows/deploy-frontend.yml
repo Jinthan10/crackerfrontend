@@ -1,4 +1,4 @@
-name: Deploy React to Azure Blob
+name: Deploy React to Azure Blob Storage
 
 on:
   push:
@@ -9,20 +9,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # 1️⃣ Checkout code
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Node
+    # 2️⃣ Setup Node.js
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: 18
 
+    # 3️⃣ Install dependencies
     - name: Install dependencies
       run: npm install
 
+    # 4️⃣ Build React app
     - name: Build React app
       run: npm run build
 
+    # 5️⃣ Azure Login
     - name: Azure Login
       uses: azure/login@v2
       with:
@@ -31,7 +36,8 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
 
-    - name: Upload to Blob Storage
+    # 6️⃣ Upload build folder to Azure Blob Storage ($web container)
+    - name: Upload React build to Blob Storage
       run: |
         az storage blob upload-batch \
           --account-name ${{ secrets.STORAGE_ACCOUNT_NAME }} \
