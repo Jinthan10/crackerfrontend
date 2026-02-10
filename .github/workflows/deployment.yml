@@ -1,40 +1,50 @@
-name: Deploy Frontend to Azure Storage
+name: Deploy React Frontend to Azure Storage
 
 on:
   push:
     branches:
-      - main
+      - main   # Change if your default branch is different
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repo
+    # 1️⃣ Checkout repository
+    - name: Checkout Repository
       uses: actions/checkout@v3
 
+    # 2️⃣ Setup Node.js
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: 18
 
+    # 3️⃣ Install dependencies
     - name: Install Dependencies
       run: npm install
 
-    - name: Build Project
-      run: npm run build   # For React/Vue/Angular
+    # 4️⃣ Update Browserslist database
+    - name: Update Browserslist DB
+      run: npx update-browserslist-db@latest
 
+    # 5️⃣ Build React app safely in CI (ignores warnings)
+    - name: Build React App
+      run: CI=false npm run build
+
+    # 6️⃣ Login to Azure using JSON secret
     - name: Azure Login
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+    # 7️⃣ Deploy build folder to Azure Storage $web container
     - name: Deploy to Azure Storage
       uses: azure/cli@v1
       with:
         inlineScript: |
           az storage blob upload-batch \
-            --account-name <storage-account-name> \
+            --account-name fronty \
             --destination '$web' \
             --source ./build \
             --overwrite
