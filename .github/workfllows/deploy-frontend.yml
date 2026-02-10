@@ -27,7 +27,16 @@ jobs:
     - name: Build React app
       run: npm run build
 
-    # 5️⃣ Azure Login
+    # 5️⃣ DEBUG: Check if GitHub can read secrets
+    - name: Print environment variables (for debugging)
+      run: |
+        echo "AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}"
+        echo "AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}"
+        echo "AZURE_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+        echo "AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}" # Optional, keep private
+        echo "STORAGE_ACCOUNT_NAME=${{ secrets.STORAGE_ACCOUNT_NAME }}"
+
+    # 6️⃣ Azure Login
     - name: Azure Login
       uses: azure/login@v2
       with:
@@ -36,7 +45,7 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
 
-    # 6️⃣ Upload build folder to Azure Blob Storage ($web container)
+    # 7️⃣ Upload build folder to Azure Blob Storage ($web container)
     - name: Upload React build to Blob Storage
       run: |
         az storage blob upload-batch \
