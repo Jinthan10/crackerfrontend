@@ -2,41 +2,40 @@ name: Deploy React to Azure Blob Storage
 
 on:
   push:
-    branches: [ "main" ]  # Trigger on main branch push
+    branches: [ "main" ]
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # 1️⃣ Checkout the repository
+    # 1️⃣ Checkout the repo
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2️⃣ Setup Node.js environment
+    # 2️⃣ Setup Node.js
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: 18
 
-    # 3️⃣ Install project dependencies
+    # 3️⃣ Install dependencies
     - name: Install dependencies
       run: npm install
 
-    # 4️⃣ Build the React application
+    # 4️⃣ Build React app
     - name: Build React app
       run: npm run build
 
-    # 5️⃣ DEBUG (optional) — Check if GitHub secrets are available
+    # 5️⃣ DEBUG: Check if secrets are available
     - name: Check Azure secrets
       run: |
-        echo "AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}"
-        echo "AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}"
-        echo "AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-        # Do NOT echo client secret in public repos
-        # echo "AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}"
+        if [ -z "${{ secrets.AZURE_CLIENT_ID }}" ]; then echo "AZURE_CLIENT_ID is empty"; else echo "AZURE_CLIENT_ID is set"; fi
+        if [ -z "${{ secrets.AZURE_TENANT_ID }}" ]; then echo "AZURE_TENANT_ID is empty"; else echo "AZURE_TENANT_ID is set"; fi
+        if [ -z "${{ secrets.AZURE_SUBSCRIPTION_ID }}" ]; then echo "AZURE_SUBSCRIPTION_ID is empty"; else echo "AZURE_SUBSCRIPTION_ID is set"; fi
+        if [ -z "${{ secrets.AZURE_CLIENT_SECRET }}" ]; then echo "AZURE_CLIENT_SECRET is empty"; else echo "AZURE_CLIENT_SECRET is set"; fi
 
-    # 6️⃣ Login to Azure using Service Principal
+    # 6️⃣ Login to Azure
     - name: Azure Login
       uses: azure/login@v2
       with:
@@ -45,7 +44,7 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
 
-    # 7️⃣ Upload the build folder to Azure Blob Storage ($web container)
+    # 7️⃣ Upload React build to Blob Storage ($web container)
     - name: Upload React build to Blob Storage
       run: |
         az storage blob upload-batch \
