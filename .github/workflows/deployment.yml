@@ -45,6 +45,6 @@ jobs:
         inlineScript: |
           az storage blob upload-batch \
             --account-name fronty \
-            --destination 'web' \
+            --destination '$web' \
             --source ./build \
             --overwrite
