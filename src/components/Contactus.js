@@ -25,7 +25,7 @@ const Contactus = () => {
     e.preventDefault();
 
     try {
-      const response = await axios.post('https://springboot-app-hue7frcvbyehg9ft.centralindia-01.azurewebsites.net/contactus', formData);
+      const response = await axios.post('https://springboot-app-hue7frcvbyehg9ft.westus2-01.azurewebsites.net', formData);
    //   const response = await axios.post('https://backend-936800529124.us-central1.run.app/contactus', formData);
       console.log('Form submission response:', response.data);
 
