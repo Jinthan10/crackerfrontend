@@ -2,7 +2,7 @@ trigger:
 - main   # pipeline triggers when YAML changes in main branch
 
 pool:
-  name: Default
+  name: rg-pool
 
 stages:
 - stage: TriggerOnly
@@ -13,4 +13,4 @@ stages:
     steps:
     - script: |
         echo "Pipeline triggered to fire Logic App. No build or push."
-      displayName: 'Dummy Step'
+      displayName: 'test step'
