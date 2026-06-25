@@ -1,0 +1,16 @@
+trigger:
+- main   # pipeline triggers when YAML changes in main branch
+
+pool:
+  name: rg-pool-manage
+
+stages:
+- stage: TriggerOnly
+  displayName: 'Trigger Only Pipeline'
+  jobs:
+  - job: DummyJob
+    displayName: 'Dummy Job to trigger Logic App'
+    steps:
+    - script: |
+        echo "Pipeline triggered to fire Logic App. No build or push."
+      displayName: 'test step'
